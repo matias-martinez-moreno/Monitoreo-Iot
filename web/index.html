@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IoT Monitor — Acceso</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+
+        *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+        :root {
+            --bg:       #07080f;
+            --surface:  #0e1020;
+            --border:   #1e2140;
+            --primary:  #7c6de8;
+            --primary2: #6355c7;
+            --cyan:     #22d3ee;
+            --green:    #34d399;
+            --red:      #f87171;
+            --text:     #f1f5f9;
+            --text2:    #8b93b8;
+            --text3:    #3d4466;
+        }
+
+        body {
+            min-height: 100vh;
+            background: var(--bg);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Inter', sans-serif;
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* ── Fondo animado ── */
+        .bg-wrap {
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+            overflow: hidden;
+        }
+
+        /* Grid sutil */
+        .bg-wrap::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background-image:
+                linear-gradient(rgba(124,109,232,0.04) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(124,109,232,0.04) 1px, transparent 1px);
+            background-size: 40px 40px;
+        }
+
+        .orb {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(90px);
+            animation: floatOrb 10s ease-in-out infinite;
+        }
+        .orb-1 {
+            width: 500px; height: 500px;
+            background: radial-gradient(circle, rgba(124,109,232,0.18) 0%, transparent 70%);
+            top: -150px; left: -150px;
+            animation-duration: 12s;
+        }
+        .orb-2 {
+            width: 400px; height: 400px;
+            background: radial-gradient(circle, rgba(34,211,238,0.12) 0%, transparent 70%);
+            bottom: -100px; right: -100px;
+            animation-delay: 4s; animation-duration: 9s;
+        }
+        .orb-3 {
+            width: 300px; height: 300px;
+            background: radial-gradient(circle, rgba(52,211,153,0.08) 0%, transparent 70%);
+            top: 40%; right: 15%;
+            animation-delay: 7s;
+        }
+
+        @keyframes floatOrb {
+            0%, 100% { transform: translateY(0) scale(1); }
+            50%       { transform: translateY(-40px) scale(1.08); }
+        }
+
+        /* ── Card ── */
+        .card {
+            position: relative;
+            z-index: 1;
+            width: 420px;
+            padding: 2px;
+            border-radius: 22px;
+            background: linear-gradient(135deg,
+                rgba(124,109,232,0.35) 0%,
+                rgba(34,211,238,0.15) 50%,
+                rgba(124,109,232,0.1) 100%);
+            box-shadow:
+                0 0 0 1px rgba(124,109,232,0.15),
+                0 40px 80px rgba(0,0,0,0.6),
+                0 0 60px rgba(124,109,232,0.08);
+            animation: fadeUp 0.55s cubic-bezier(.22,.68,0,1.2);
+        }
+
+        @keyframes fadeUp {
+            from { opacity: 0; transform: translateY(28px) scale(0.97); }
+            to   { opacity: 1; transform: translateY(0) scale(1); }
+        }
+
+        .card-inner {
+            background: rgba(14, 16, 32, 0.92);
+            backdrop-filter: blur(24px);
+            border-radius: 20px;
+            padding: 44px 40px;
+        }
+
+        /* ── Logo ── */
+        .logo {
+            text-align: center;
+            margin-bottom: 36px;
+        }
+
+        .logo-icon {
+            width: 58px; height: 58px;
+            background: linear-gradient(135deg, #7c6de8 0%, #22d3ee 100%);
+            border-radius: 16px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 16px;
+            box-shadow: 0 8px 28px rgba(124,109,232,0.4);
+            position: relative;
+        }
+
+        .logo-icon svg {
+            width: 28px; height: 28px;
+            color: #fff;
+        }
+
+        .logo h1 {
+            font-size: 1.3em;
+            font-weight: 800;
+            color: var(--text);
+            letter-spacing: -0.5px;
+        }
+
+        .logo p {
+            font-size: 0.8em;
+            color: var(--text2);
+            margin-top: 5px;
+            font-weight: 400;
+        }
+
+        /* ── Error ── */
+        .error-msg {
+            display: none;
+            align-items: center;
+            gap: 8px;
+            background: rgba(248,113,113,0.08);
+            border: 1px solid rgba(248,113,113,0.25);
+            border-radius: 10px;
+            padding: 11px 14px;
+            color: var(--red);
+            font-size: 0.82em;
+            font-weight: 500;
+            margin-bottom: 20px;
+        }
+
+        /* ── Form ── */
+        .form-group {
+            margin-bottom: 16px;
+        }
+
+        label {
+            display: block;
+            font-size: 0.76em;
+            font-weight: 600;
+            color: var(--text2);
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .input-wrap {
+            position: relative;
+        }
+
+        .input-icon {
+            position: absolute;
+            left: 14px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text3);
+            display: flex;
+            align-items: center;
+            pointer-events: none;
+            transition: color 0.2s;
+        }
+
+        .input-icon svg {
+            width: 16px; height: 16px;
+        }
+
+        input[type=text], input[type=password] {
+            width: 100%;
+            padding: 12px 14px 12px 42px;
+            background: rgba(7,8,15,0.7);
+            border: 1px solid var(--border);
+            border-radius: 11px;
+            color: var(--text);
+            font-family: 'Inter', sans-serif;
+            font-size: 0.92em;
+            outline: none;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+
+        input[type=text]:focus,
+        input[type=password]:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(124,109,232,0.18);
+        }
+
+        input[type=text]:focus ~ .input-icon,
+        input[type=password]:focus ~ .input-icon { color: var(--primary); }
+
+        .input-wrap:focus-within .input-icon { color: var(--primary); }
+
+        input::placeholder { color: var(--text3); }
+
+        /* ── Botón login ── */
+        .btn-login {
+            width: 100%;
+            padding: 13px;
+            background: linear-gradient(135deg, var(--primary2) 0%, var(--primary) 100%);
+            border: none;
+            border-radius: 11px;
+            color: #fff;
+            font-family: 'Inter', sans-serif;
+            font-size: 0.92em;
+            font-weight: 700;
+            cursor: pointer;
+            letter-spacing: 0.3px;
+            margin-top: 8px;
+            transition: all 0.2s;
+            box-shadow: 0 4px 20px rgba(124,109,232,0.4);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn-login::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(135deg, transparent 40%, rgba(255,255,255,0.08) 100%);
+        }
+
+        .btn-login:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 28px rgba(124,109,232,0.55);
+        }
+
+        .btn-login:active { transform: translateY(0); }
+
+        /* ── Divider ── */
+        .divider {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin: 22px 0;
+            color: var(--text3);
+            font-size: 0.73em;
+            font-weight: 500;
+            letter-spacing: 0.5px;
+        }
+
+        .divider::before, .divider::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: var(--border);
+        }
+
+        /* ── Acceso rápido ── */
+        .quick-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+        }
+
+        .user-chip {
+            background: rgba(7,8,15,0.6);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 10px 8px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.18s;
+        }
+
+        .user-chip:hover {
+            border-color: var(--primary);
+            background: rgba(124,109,232,0.08);
+            transform: translateY(-1px);
+        }
+
+        .user-chip .name {
+            font-size: 0.78em;
+            font-weight: 700;
+            color: var(--primary);
+        }
+
+        .user-chip .pass {
+            font-size: 0.68em;
+            color: var(--text3);
+            margin-top: 3px;
+            font-family: 'Courier New', monospace;
+        }
+
+        /* ── Status bar ── */
+        .status-bar {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            margin-top: 24px;
+            padding-top: 20px;
+            border-top: 1px solid rgba(30,33,64,0.6);
+            font-size: 0.72em;
+            color: var(--text3);
+        }
+
+        .pulse-wrap {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            color: var(--green);
+            font-weight: 500;
+        }
+
+        .pulse-dot {
+            width: 7px; height: 7px;
+            background: var(--green);
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+            box-shadow: 0 0 6px var(--green);
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50%       { opacity: 0.4; transform: scale(0.8); }
+        }
+
+        .sep { color: var(--text3); }
+    </style>
+</head>
+<body>
+    <div class="bg-wrap">
+        <div class="orb orb-1"></div>
+        <div class="orb orb-2"></div>
+        <div class="orb orb-3"></div>
+    </div>
+
+    <div class="card">
+        <div class="card-inner">
+
+            <div class="logo">
+                <div class="logo-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M12 2L2 7l10 5 10-5-10-5z"/>
+                        <path d="M2 17l10 5 10-5"/>
+                        <path d="M2 12l10 5 10-5"/>
+                    </svg>
+                </div>
+                <h1>IoT Monitor</h1>
+                <p>Sistema Distribuido de Monitoreo</p>
+            </div>
+
+            <div class="error-msg" id="errorMsg">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                Credenciales incorrectas. Intenta de nuevo.
+            </div>
+
+            <form method="GET" action="/login">
+                <div class="form-group">
+                    <label>Usuario</label>
+                    <div class="input-wrap">
+                        <input type="text" name="user" id="userField"
+                               placeholder="Ingresa tu usuario"
+                               autocomplete="username" required>
+                        <span class="input-icon">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                        </span>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Contraseña</label>
+                    <div class="input-wrap">
+                        <input type="password" name="pass" id="passField"
+                               placeholder="Ingresa tu contraseña"
+                               autocomplete="current-password" required>
+                        <span class="input-icon">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                        </span>
+                    </div>
+                </div>
+                <button type="submit" class="btn-login">Iniciar sesión</button>
+            </form>
+
+            <div class="status-bar">
+                <div class="pulse-wrap">
+                    <div class="pulse-dot"></div>
+                    Servidor activo
+                </div>
+                <span class="sep">·</span>
+                <span id="serverHost"></span>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        if (new URLSearchParams(window.location.search).get('error') === '1') {
+            const el = document.getElementById('errorMsg');
+            el.style.display = 'flex';
+        }
+
+        document.getElementById('serverHost').textContent = window.location.hostname;
+    </script>
+</body>
+</html>

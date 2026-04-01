@@ -1,0 +1,1603 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IoT Monitor — Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+
+        *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+        :root {
+            --bg:       #07080f;
+            --surface:  #0d0f1e;
+            --surface2: #121427;
+            --border:   #1c1f3a;
+            --border2:  #161830;
+            --primary:  #7c6de8;
+            --primary2: #6355c7;
+            --cyan:     #22d3ee;
+            --green:    #34d399;
+            --red:      #f87171;
+            --yellow:   #fbbf24;
+            --purple:   #c084fc;
+            --text:     #f1f5f9;
+            --text2:    #8892b0;
+            --text3:    #3d4466;
+        }
+
+        body {
+            background: var(--bg);
+            color: var(--text);
+            font-family: 'Inter', sans-serif;
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+            font-size: 14px;
+        }
+
+        /* ════════════════════════════════════
+           SIDEBAR
+        ════════════════════════════════════ */
+        #sidebar {
+            width: 228px;
+            min-width: 228px;
+            background: var(--surface);
+            border-right: 1px solid var(--border2);
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* Gradiente decorativo arriba del sidebar */
+        #sidebar::before {
+            content: '';
+            position: absolute;
+            top: -80px;
+            left: -80px;
+            width: 240px;
+            height: 240px;
+            background: radial-gradient(circle, rgba(124,109,232,0.12) 0%, transparent 70%);
+            pointer-events: none;
+        }
+
+        .sidebar-header {
+            padding: 22px 18px 18px;
+            border-bottom: 1px solid var(--border2);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            position: relative;
+        }
+
+        .sidebar-logo-icon {
+            width: 36px; height: 36px;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--cyan) 100%);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            box-shadow: 0 4px 14px rgba(124,109,232,0.35);
+        }
+
+        .sidebar-logo-icon svg {
+            width: 18px; height: 18px;
+            color: #fff;
+        }
+
+        .sidebar-header h1 {
+            font-size: 0.94em;
+            font-weight: 800;
+            color: var(--text);
+            letter-spacing: -0.3px;
+        }
+
+        .sidebar-header p {
+            font-size: 0.68em;
+            color: var(--text3);
+            margin-top: 2px;
+        }
+
+        .nav-section {
+            padding: 14px 10px 6px;
+        }
+
+        .nav-label {
+            font-size: 0.66em;
+            font-weight: 700;
+            color: var(--text3);
+            letter-spacing: 1.2px;
+            padding: 4px 8px 9px;
+            text-transform: uppercase;
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 9px 12px;
+            border-radius: 9px;
+            cursor: pointer;
+            color: var(--text2);
+            font-size: 0.86em;
+            font-weight: 500;
+            transition: all 0.15s;
+            position: relative;
+            margin-bottom: 2px;
+        }
+
+        .nav-item:hover {
+            color: var(--text);
+            background: rgba(255,255,255,0.04);
+        }
+
+        .nav-item.active {
+            color: var(--primary);
+            background: rgba(124,109,232,0.12);
+        }
+
+        .nav-item .icon svg {
+            width: 16px; height: 16px;
+        }
+
+        .nav-badge {
+            margin-left: auto;
+            background: var(--red);
+            color: #fff;
+            font-size: 0.68em;
+            font-weight: 700;
+            padding: 2px 7px;
+            border-radius: 10px;
+            display: none;
+        }
+
+        .sidebar-footer {
+            margin-top: auto;
+            padding: 14px 18px;
+            border-top: 1px solid var(--border2);
+            font-size: 0.74em;
+            color: var(--text2);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            position: relative;
+        }
+
+        .live-dot {
+            width: 7px; height: 7px;
+            background: var(--green);
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+            flex-shrink: 0;
+            box-shadow: 0 0 6px var(--green);
+        }
+
+        /* ════════════════════════════════════
+           MAIN
+        ════════════════════════════════════ */
+        #main {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            min-width: 0;
+            background: var(--bg);
+            /* Sutil dot-grid */
+            background-image:
+                radial-gradient(rgba(124,109,232,0.04) 1px, transparent 1px);
+            background-size: 28px 28px;
+        }
+
+        /* Topbar */
+        #topbar {
+            background: rgba(13,15,30,0.9);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid var(--border2);
+            padding: 12px 22px;
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            position: relative;
+            z-index: 10;
+        }
+
+        #topbar h2 {
+            font-size: 0.94em;
+            font-weight: 700;
+            flex: 1;
+            color: var(--text);
+        }
+
+        .search-wrap { position: relative; }
+
+        .search-icon {
+            position: absolute;
+            left: 11px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text3);
+            pointer-events: none;
+        }
+
+        .search-icon svg { width: 14px; height: 14px; }
+
+        #searchbar {
+            background: var(--surface2);
+            border: 1px solid var(--border2);
+            color: var(--text);
+            font-family: 'Inter', sans-serif;
+            font-size: 0.82em;
+            padding: 7px 12px 7px 34px;
+            border-radius: 9px;
+            width: 210px;
+            outline: none;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+
+        #searchbar:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(124,109,232,0.15);
+        }
+
+        #searchbar::placeholder { color: var(--text3); }
+
+        .time-display {
+            font-size: 0.77em;
+            color: var(--text3);
+            white-space: nowrap;
+            font-variant-numeric: tabular-nums;
+        }
+
+        /* Content */
+        #content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px 22px;
+        }
+
+        /* Views */
+        .view { display: none; }
+        .view.active { display: block; }
+
+        /* ════════════════════════════════════
+           STATS ROW
+        ════════════════════════════════════ */
+        .stats-row {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+
+        .stat-card {
+            background: var(--surface);
+            border: 1px solid var(--border2);
+            border-radius: 14px;
+            padding: 18px 16px;
+            position: relative;
+            overflow: hidden;
+            transition: border-color 0.2s, transform 0.15s;
+        }
+
+        .stat-card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, var(--primary), var(--cyan));
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+
+        .stat-card:hover {
+            border-color: var(--border);
+            transform: translateY(-2px);
+        }
+
+        .stat-card:hover::before { opacity: 1; }
+
+        .stat-top {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            margin-bottom: 12px;
+        }
+
+        .stat-icon {
+            width: 36px; height: 36px;
+            border-radius: 9px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .stat-icon svg { width: 18px; height: 18px; }
+
+        .si-blue   { background: rgba(124,109,232,0.15); color: var(--primary); }
+        .si-green  { background: rgba(52,211,153,0.12);  color: var(--green); }
+        .si-red    { background: rgba(248,113,113,0.12); color: var(--red); }
+        .si-yellow { background: rgba(251,191,36,0.12);  color: var(--yellow); }
+
+        .stat-trend {
+            font-size: 0.7em;
+            font-weight: 600;
+            padding: 2px 7px;
+            border-radius: 6px;
+        }
+
+        .trend-up   { background: rgba(52,211,153,0.1);  color: var(--green); }
+        .trend-down { background: rgba(248,113,113,0.1); color: var(--red); }
+
+        .stat-value {
+            font-size: 2.2em;
+            font-weight: 800;
+            line-height: 1;
+            margin-bottom: 5px;
+            letter-spacing: -1px;
+        }
+
+        .stat-label {
+            font-size: 0.72em;
+            color: var(--text2);
+            font-weight: 500;
+        }
+
+        /* ════════════════════════════════════
+           FILTER BAR
+        ════════════════════════════════════ */
+        .filter-bar {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            margin-bottom: 16px;
+            flex-wrap: wrap;
+        }
+
+        .filter-sep {
+            width: 1px;
+            height: 18px;
+            background: var(--border);
+            margin: 0 4px;
+        }
+
+        .filter-label {
+            font-size: 0.7em;
+            color: var(--text3);
+            font-weight: 700;
+            letter-spacing: 0.8px;
+            text-transform: uppercase;
+        }
+
+        .chip {
+            padding: 5px 13px;
+            border-radius: 20px;
+            font-size: 0.76em;
+            font-weight: 500;
+            cursor: pointer;
+            border: 1px solid var(--border);
+            background: transparent;
+            color: var(--text2);
+            font-family: 'Inter', sans-serif;
+            transition: all 0.15s;
+            white-space: nowrap;
+        }
+
+        .chip:hover   { border-color: var(--primary); color: var(--primary); }
+
+        .chip.active  {
+            background: rgba(124,109,232,0.12);
+            color: var(--primary);
+            border-color: rgba(124,109,232,0.4);
+        }
+
+        .chip.c-green.active  {
+            background: rgba(52,211,153,0.1);
+            color: var(--green);
+            border-color: rgba(52,211,153,0.35);
+        }
+
+        .chip.c-red.active {
+            background: rgba(248,113,113,0.1);
+            color: var(--red);
+            border-color: rgba(248,113,113,0.35);
+        }
+
+        .chip.c-yellow.active {
+            background: rgba(251,191,36,0.1);
+            color: var(--yellow);
+            border-color: rgba(251,191,36,0.35);
+        }
+
+        /* ════════════════════════════════════
+           SENSOR CARDS
+        ════════════════════════════════════ */
+        #cards-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(268px, 1fr));
+            gap: 14px;
+        }
+
+        .sensor-card {
+            background: var(--surface);
+            border: 1px solid var(--border2);
+            border-radius: 16px;
+            padding: 20px;
+            transition: border-color 0.2s, transform 0.15s, box-shadow 0.2s;
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* Top accent line coloreada por tipo */
+        .sensor-card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 3px;
+            border-radius: 16px 16px 0 0;
+            opacity: 0.7;
+            transition: opacity 0.2s;
+        }
+
+        .sensor-card:hover {
+            border-color: var(--border);
+            transform: translateY(-3px);
+            box-shadow: 0 12px 32px rgba(0,0,0,0.35);
+        }
+
+        .sensor-card:hover::before { opacity: 1; }
+
+        /* Colores del accent por tipo */
+        .sensor-card[data-type="temperatura"]::before { background: linear-gradient(90deg, #f87171, #fb923c); }
+        .sensor-card[data-type="vibracion"]::before   { background: linear-gradient(90deg, #fbbf24, #f59e0b); }
+        .sensor-card[data-type="energia"]::before     { background: linear-gradient(90deg, #34d399, #10b981); }
+        .sensor-card[data-type="presion"]::before     { background: linear-gradient(90deg, #22d3ee, #0ea5e9); }
+        .sensor-card[data-type="humedad"]::before     { background: linear-gradient(90deg, #c084fc, #a855f7); }
+
+        .sensor-card.is-alert {
+            border-color: rgba(248,113,113,0.4) !important;
+            animation: alertPulse 2s infinite;
+        }
+
+        .sensor-card.is-paused {
+            opacity: 0.55;
+            border-color: rgba(251,191,36,0.3) !important;
+        }
+
+        @keyframes alertPulse {
+            0%, 100% { box-shadow: none; }
+            50%       { box-shadow: 0 0 20px rgba(248,113,113,0.25); }
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 16px;
+        }
+
+        .card-id   { font-size: 0.9em; font-weight: 700; color: var(--text); margin-bottom: 3px; }
+        .card-type { font-size: 0.71em; color: var(--text2); }
+
+        .type-badge {
+            font-size: 0.66em;
+            font-weight: 700;
+            padding: 3px 9px;
+            border-radius: 6px;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+        }
+
+        .tb-temp    { background: rgba(248,113,113,0.12); color: #f87171; }
+        .tb-vib     { background: rgba(251,191,36,0.12);  color: #fbbf24; }
+        .tb-energia { background: rgba(52,211,153,0.12);  color: #34d399; }
+        .tb-presion { background: rgba(34,211,238,0.12);  color: #22d3ee; }
+        .tb-humedad { background: rgba(192,132,252,0.12); color: #c084fc; }
+
+        .card-value {
+            font-size: 2.1em;
+            font-weight: 800;
+            margin-bottom: 12px;
+            transition: color 0.4s;
+            letter-spacing: -1px;
+            line-height: 1;
+        }
+
+        .card-unit {
+            font-size: 0.34em;
+            font-weight: 400;
+            color: var(--text2);
+            margin-left: 3px;
+            letter-spacing: 0;
+        }
+
+        .progress-track {
+            height: 3px;
+            background: var(--border);
+            border-radius: 2px;
+            margin-bottom: 14px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            border-radius: 2px;
+            transition: width 0.7s cubic-bezier(.22,.68,0,1.2), background 0.4s;
+        }
+
+        .card-chart { height: 52px; margin-bottom: 14px; }
+
+        .card-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        /* Status pill */
+        .status-pill {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.72em;
+            font-weight: 600;
+        }
+
+        .sp-dot {
+            width: 6px; height: 6px;
+            border-radius: 50%;
+        }
+
+        .sp-online  .sp-dot {
+            background: var(--green);
+            animation: pulse 2s infinite;
+            box-shadow: 0 0 5px var(--green);
+        }
+
+        .sp-offline .sp-dot { background: var(--text3); }
+        .sp-paused  .sp-dot { background: var(--yellow); }
+        .sp-online  { color: var(--green); }
+        .sp-offline { color: var(--text3); }
+        .sp-paused  { color: var(--yellow); }
+
+        /* Toggle */
+        .toggle-wrap { display: flex; align-items: center; gap: 8px; }
+        .toggle-label { font-size: 0.69em; color: var(--text3); }
+
+        .toggle { position: relative; width: 38px; height: 20px; }
+        .toggle input { opacity: 0; width: 0; height: 0; }
+
+        .toggle-slider {
+            position: absolute;
+            inset: 0;
+            cursor: pointer;
+            background: var(--border);
+            border-radius: 20px;
+            transition: 0.25s;
+        }
+
+        .toggle-slider::before {
+            content: '';
+            position: absolute;
+            width: 14px; height: 14px;
+            left: 3px; top: 3px;
+            background: var(--text2);
+            border-radius: 50%;
+            transition: 0.25s;
+        }
+
+        input:checked + .toggle-slider { background: var(--primary); }
+        input:checked + .toggle-slider::before {
+            transform: translateX(18px);
+            background: #fff;
+        }
+
+        /* ════════════════════════════════════
+           ALERTAS
+        ════════════════════════════════════ */
+        .alerts-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+
+        .alerts-header h3 {
+            font-size: 0.92em;
+            font-weight: 700;
+        }
+
+        .btn-sm {
+            background: transparent;
+            border: 1px solid var(--border);
+            color: var(--text2);
+            font-family: 'Inter', sans-serif;
+            font-size: 0.76em;
+            padding: 5px 13px;
+            border-radius: 7px;
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+
+        .btn-sm:hover { border-color: var(--red); color: var(--red); }
+
+        .alert-item {
+            background: var(--surface);
+            border: 1px solid var(--border2);
+            border-radius: 11px;
+            padding: 14px 16px;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: flex-start;
+            gap: 13px;
+            transition: transform 0.15s, border-color 0.2s;
+            position: relative;
+        }
+
+        .alert-item::before {
+            content: '';
+            position: absolute;
+            left: 0; top: 0; bottom: 0;
+            width: 3px;
+            border-radius: 11px 0 0 11px;
+            background: var(--red);
+        }
+
+        .alert-item:hover {
+            transform: translateX(3px);
+            border-color: var(--border);
+        }
+
+        .alert-icon { font-size: 1.1em; flex-shrink: 0; margin-top: 1px; }
+        .alert-content { flex: 1; min-width: 0; }
+        .alert-sensor { font-size: 0.82em; font-weight: 700; color: var(--primary); }
+        .alert-desc   { font-size: 0.79em; color: var(--text); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .alert-time   { font-size: 0.69em; color: var(--text3); margin-top: 4px; }
+        .alert-val    { font-size: 0.88em; font-weight: 800; color: var(--red); white-space: nowrap; }
+
+        .empty-state {
+            text-align: center;
+            padding: 56px;
+            color: var(--text3);
+            font-size: 0.84em;
+        }
+
+        /* ════════════════════════════════════
+           CONFIG
+        ════════════════════════════════════ */
+        .config-card {
+            background: var(--surface);
+            border: 1px solid var(--border2);
+            border-radius: 14px;
+            padding: 26px;
+            margin-bottom: 14px;
+        }
+
+        .config-card h3 {
+            font-size: 0.9em;
+            font-weight: 700;
+            margin-bottom: 6px;
+        }
+
+        .config-card p {
+            font-size: 0.78em;
+            color: var(--text2);
+            margin-bottom: 24px;
+            line-height: 1.5;
+        }
+
+        .threshold-row { margin-bottom: 24px; }
+
+        .threshold-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            margin-bottom: 9px;
+        }
+
+        .threshold-top .tname {
+            font-size: 0.82em;
+            font-weight: 600;
+            color: var(--text);
+        }
+
+        .threshold-top .tval {
+            font-size: 0.85em;
+            font-weight: 800;
+            color: var(--yellow);
+            font-variant-numeric: tabular-nums;
+        }
+
+        input[type=range] {
+            width: 100%;
+            cursor: pointer;
+            height: 5px;
+            accent-color: var(--primary);
+            outline: none;
+        }
+
+        .threshold-ends {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.69em;
+            color: var(--text3);
+            margin-top: 6px;
+        }
+
+        .btn-apply {
+            background: linear-gradient(135deg, var(--primary2), var(--primary));
+            border: none;
+            border-radius: 9px;
+            color: #fff;
+            font-family: 'Inter', sans-serif;
+            font-size: 0.85em;
+            font-weight: 700;
+            padding: 10px 24px;
+            cursor: pointer;
+            transition: all 0.2s;
+            box-shadow: 0 4px 16px rgba(124,109,232,0.35);
+        }
+
+        .btn-apply:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(124,109,232,0.5);
+        }
+
+        .btn-csv {
+            background: transparent;
+            border: 1px solid var(--border);
+            color: var(--text2);
+            font-family: 'Inter', sans-serif;
+            font-size: 0.80em;
+            font-weight: 600;
+            padding: 7px 14px;
+            border-radius: 7px;
+            cursor: pointer;
+            transition: all 0.15s;
+            white-space: nowrap;
+        }
+
+        .btn-csv:hover {
+            border-color: var(--primary);
+            color: var(--primary);
+            background: rgba(124,109,232,0.05);
+        }
+
+        /* Modal CSV */
+        .modal-backdrop {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.6);
+            backdrop-filter: blur(4px);
+            z-index: 100;
+            align-items: center;
+            justify-content: center;
+        }
+        .modal-backdrop.open { display: flex; }
+
+        .modal {
+            background: var(--surface);
+            border: 1px solid var(--border2);
+            border-radius: 16px;
+            padding: 24px;
+            width: 340px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+        }
+
+        .modal h4 { font-size: 1em; font-weight: 700; margin-bottom: 6px; }
+        .modal p  { font-size: 0.78em; color: var(--text2); margin-bottom: 18px; }
+
+        .modal-options { display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px; }
+
+        .modal-opt {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 12px;
+            border: 1px solid var(--border2);
+            border-radius: 9px;
+            cursor: pointer;
+            font-size: 0.84em;
+            transition: all 0.15s;
+        }
+        .modal-opt:hover { border-color: var(--primary); background: rgba(124,109,232,0.06); }
+        .modal-opt input[type=radio] { accent-color: var(--primary); }
+
+        .modal-footer { display: flex; gap: 10px; justify-content: flex-end; }
+        .modal-cancel { background: transparent; border: 1px solid var(--border); color: var(--text2); font-family: 'Inter', sans-serif; font-size: 0.82em; padding: 8px 16px; border-radius: 7px; cursor: pointer; }
+        .modal-confirm { background: linear-gradient(135deg, var(--primary2), var(--primary)); border: none; color: #fff; font-family: 'Inter', sans-serif; font-size: 0.82em; font-weight: 700; padding: 8px 20px; border-radius: 7px; cursor: pointer; }
+
+        #thresh-msg { font-size: 0.77em; margin-left: 13px; font-weight: 600; }
+
+        /* ════════════════════════════════════
+           TOASTS
+        ════════════════════════════════════ */
+        #toasts {
+            position: fixed;
+            bottom: 22px;
+            right: 22px;
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            pointer-events: none;
+        }
+
+        .toast {
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            border-left: 3px solid;
+            border-radius: 11px;
+            padding: 12px 16px;
+            min-width: 280px;
+            max-width: 340px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+            animation: toastIn 0.3s cubic-bezier(.22,.68,0,1.2);
+            transition: opacity 0.4s;
+        }
+
+        .toast-head {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 3px;
+        }
+
+        .toast-title { font-size: 0.82em; font-weight: 700; }
+        .toast-body  { font-size: 0.76em; color: var(--text2); }
+
+        @keyframes toastIn {
+            from { opacity: 0; transform: translateX(24px) scale(0.95); }
+            to   { opacity: 1; transform: translateX(0) scale(1); }
+        }
+
+        /* ════════════════════════════════════
+           SCROLLBAR
+        ════════════════════════════════════ */
+        ::-webkit-scrollbar { width: 5px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50%       { opacity: 0.3; }
+        }
+    </style>
+</head>
+<body>
+
+<!-- ── SIDEBAR ── -->
+<nav id="sidebar">
+    <div class="sidebar-header">
+        <div class="sidebar-logo-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 2L2 7l10 5 10-5-10-5z"/>
+                <path d="M2 17l10 5 10-5"/>
+                <path d="M2 12l10 5 10-5"/>
+            </svg>
+        </div>
+        <div>
+            <h1>IoT Monitor</h1>
+            <p>Panel de control</p>
+        </div>
+    </div>
+
+    <div class="nav-section">
+        <div class="nav-label">Principal</div>
+        <div class="nav-item active" onclick="showView('dashboard',this)">
+            <span class="icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg>
+            </span>
+            Dashboard
+        </div>
+        <div class="nav-item" onclick="showView('alertas',this)">
+            <span class="icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+            </span>
+            Alertas
+            <span class="nav-badge" id="nav-badge">0</span>
+        </div>
+    </div>
+
+    <div class="nav-section">
+        <div class="nav-label">Sistema</div>
+        <div class="nav-item" onclick="showView('config',this)">
+            <span class="icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+            </span>
+            Configuración
+        </div>
+    </div>
+
+    <div class="sidebar-footer">
+        <div class="live-dot"></div>
+        <span id="sb-info">Cargando...</span>
+    </div>
+</nav>
+
+<!-- ── MAIN ── -->
+<div id="main">
+    <!-- Topbar -->
+    <div id="topbar">
+        <h2 id="view-title">Dashboard</h2>
+        <div class="search-wrap">
+            <span class="search-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            </span>
+            <input id="searchbar" type="text" placeholder="Buscar sensor..." oninput="applySearch()">
+        </div>
+        <button class="btn-csv" onclick="downloadCSV()" title="Descargar datos en CSV">Descargar CSV</button>
+        <div class="time-display" id="clock"></div>
+    </div>
+
+    <div id="content">
+
+        <!-- ── DASHBOARD ── -->
+        <div id="view-dashboard" class="view active">
+
+            <!-- Stats -->
+            <div class="stats-row">
+                <div class="stat-card">
+                    <div class="stat-top">
+                        <div class="stat-icon si-blue">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.61 3.18C1.61 2.1 2.48 1 3.58 1h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 8.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+                        </div>
+                        <span class="stat-trend trend-up" id="st-trend">activo</span>
+                    </div>
+                    <div class="stat-value" id="st-total" style="color:var(--primary)">0</div>
+                    <div class="stat-label">Sensores totales</div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-top">
+                        <div class="stat-icon si-green">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                        </div>
+                    </div>
+                    <div class="stat-value" id="st-online" style="color:var(--green)">0</div>
+                    <div class="stat-label">En línea</div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-top">
+                        <div class="stat-icon si-red">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+                        </div>
+                    </div>
+                    <div class="stat-value" id="st-offline" style="color:var(--red)">0</div>
+                    <div class="stat-label">Offline / Pausados</div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-top">
+                        <div class="stat-icon si-yellow">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                        </div>
+                    </div>
+                    <div class="stat-value" id="st-alerts" style="color:var(--yellow)">0</div>
+                    <div class="stat-label">Alertas generadas</div>
+                </div>
+            </div>
+
+            <!-- Filtros -->
+            <div class="filter-bar">
+                <span class="filter-label">Tipo</span>
+                <span class="chip active" data-f="type" data-v="all"        onclick="setFilter(this)">Todos</span>
+                <span class="chip"        data-f="type" data-v="temperatura" onclick="setFilter(this)">Temperatura</span>
+                <span class="chip"        data-f="type" data-v="vibracion"   onclick="setFilter(this)">Vibración</span>
+                <span class="chip"        data-f="type" data-v="energia"     onclick="setFilter(this)">Energía</span>
+                <span class="chip"        data-f="type" data-v="presion"     onclick="setFilter(this)">Presión</span>
+                <span class="chip"        data-f="type" data-v="humedad"     onclick="setFilter(this)">Humedad</span>
+                <div class="filter-sep"></div>
+                <span class="filter-label">Estado</span>
+                <span class="chip c-green  active" data-f="status" data-v="all"     onclick="setFilter(this)">Todos</span>
+                <span class="chip c-green"         data-f="status" data-v="ONLINE"  onclick="setFilter(this)">Activo</span>
+                <span class="chip c-red"           data-f="status" data-v="OFFLINE" onclick="setFilter(this)">Desconectado</span>
+                <span class="chip c-yellow"        data-f="status" data-v="PAUSED"  onclick="setFilter(this)">Pausado</span>
+                <div class="filter-sep"></div>
+                <span class="filter-label">Alerta</span>
+                <span class="chip active" data-f="alert" data-v="all"       onclick="setFilter(this)">Todas</span>
+                <span class="chip c-red"  data-f="alert" data-v="true"      onclick="setFilter(this)">Con Alerta</span>
+                <span class="chip c-green" data-f="alert" data-v="false"    onclick="setFilter(this)">Normal</span>
+            </div>
+
+            <div class="filter-bar" style="margin-top:12px">
+                <span class="filter-label">Ubicación</span>
+                <span class="chip active" data-f="location" data-v="all"   onclick="setFilter(this)">Todas</span>
+                <div id="location-chips"></div>
+            </div>
+
+            <div id="cards-grid"></div>
+        </div>
+
+        <!-- ── ALERTAS ── -->
+        <div id="view-alertas" class="view">
+            <div class="alerts-header">
+                <h3>Historial de alertas (<span id="al-count">0</span>)</h3>
+                <button class="btn-sm" onclick="clearAlerts()">Limpiar todo</button>
+            </div>
+
+            <div class="filter-bar" style="margin-bottom:16px; flex-wrap:wrap; gap:6px;">
+                <span class="chip active" data-af="all"          onclick="setAlertFilter(this)">Todas</span>
+                <span class="chip"        data-af="TEMPERATURA_1" onclick="setAlertFilter(this)">TEMPERATURA_1</span>
+                <span class="chip"        data-af="TEMPERATURA_2" onclick="setAlertFilter(this)">TEMPERATURA_2</span>
+                <span class="chip"        data-af="VIBRACION_1"   onclick="setAlertFilter(this)">VIBRACION_1</span>
+                <span class="chip"        data-af="ENERGIA_1"     onclick="setAlertFilter(this)">ENERGIA_1</span>
+                <span class="chip"        data-af="PRESION_1"     onclick="setAlertFilter(this)">PRESION_1</span>
+                <span class="chip"        data-af="PRESION_2"     onclick="setAlertFilter(this)">PRESION_2</span>
+                <span class="chip"        data-af="HUMEDAD_1"     onclick="setAlertFilter(this)">HUMEDAD_1</span>
+            </div>
+
+            <div id="alerts-list"></div>
+        </div>
+
+        <!-- ── CONFIG ── -->
+        <div id="view-config" class="view">
+            <div class="config-card">
+                <h3>Umbrales de alerta</h3>
+                <p>Configura el límite máximo para cada sensor. Los cambios se aplican automáticamente.</p>
+
+                <div class="threshold-row">
+                    <div class="threshold-top">
+                        <span class="tname">TEMPERATURA_1</span>
+                        <span class="tval" id="lbl-temp">80 °C</span>
+                    </div>
+                    <input type="range" min="40" max="150" value="80" id="sl-temp" oninput="updateLbl('temp','°C'); applyThresholds();">
+                    <div class="threshold-ends"><span>40</span><span>150 °C</span></div>
+                </div>
+
+                <div class="threshold-row">
+                    <div class="threshold-top">
+                        <span class="tname">TEMPERATURA_2</span>
+                        <span class="tval" id="lbl-temp2">80 °C</span>
+                    </div>
+                    <input type="range" min="40" max="150" value="80" id="sl-temp2" oninput="updateLbl('temp2','°C'); applyThresholds();">
+                    <div class="threshold-ends"><span>40</span><span>150 °C</span></div>
+                </div>
+
+                <div class="threshold-row">
+                    <div class="threshold-top">
+                        <span class="tname">VIBRACION_1</span>
+                        <span class="tval" id="lbl-vib">10 mm/s</span>
+                    </div>
+                    <input type="range" min="1" max="50" value="10" id="sl-vib" oninput="updateLbl('vib','mm/s'); applyThresholds();">
+                    <div class="threshold-ends"><span>1</span><span>50 mm/s</span></div>
+                </div>
+
+                <div class="threshold-row">
+                    <div class="threshold-top">
+                        <span class="tname">ENERGIA_1</span>
+                        <span class="tval" id="lbl-energia">100 kWh</span>
+                    </div>
+                    <input type="range" min="20" max="300" value="100" id="sl-energia" oninput="updateLbl('energia','kWh'); applyThresholds();">
+                    <div class="threshold-ends"><span>20</span><span>300 kWh</span></div>
+                </div>
+
+                <div class="threshold-row">
+                    <div class="threshold-top">
+                        <span class="tname">PRESION_1</span>
+                        <span class="tval" id="lbl-presion">5 bar</span>
+                    </div>
+                    <input type="range" min="1" max="20" value="5" id="sl-presion" oninput="updateLbl('presion','bar'); applyThresholds();">
+                    <div class="threshold-ends"><span>1</span><span>20 bar</span></div>
+                </div>
+
+                <div class="threshold-row">
+                    <div class="threshold-top">
+                        <span class="tname">PRESION_2</span>
+                        <span class="tval" id="lbl-presion2">5 bar</span>
+                    </div>
+                    <input type="range" min="1" max="20" value="5" id="sl-presion2" oninput="updateLbl('presion2','bar'); applyThresholds();">
+                    <div class="threshold-ends"><span>1</span><span>20 bar</span></div>
+                </div>
+
+                <div class="threshold-row">
+                    <div class="threshold-top">
+                        <span class="tname">HUMEDAD_1</span>
+                        <span class="tval" id="lbl-humedad">80 %</span>
+                    </div>
+                    <input type="range" min="30" max="100" value="80" id="sl-humedad" oninput="updateLbl('humedad','%'); applyThresholds();">
+                    <div class="threshold-ends"><span>30</span><span>100 %</span></div>
+                </div>
+
+                <span id="thresh-msg" style="display:block; margin-top:12px; font-size:0.82em; text-align:center;"></span>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<!-- ── TOASTS ── -->
+<div id="toasts"></div>
+
+<!-- Modal CSV -->
+<div class="modal-backdrop" id="csv-modal">
+    <div class="modal">
+        <h4>Exportar historial a CSV</h4>
+        <p>Cada fila es una lectura con timestamp. Elige cuántos registros exportar.</p>
+        <div class="modal-options">
+            <label class="modal-opt">
+                <input type="radio" name="csv-opt" value="50" checked>
+                Últimos 50 registros
+            </label>
+            <label class="modal-opt">
+                <input type="radio" name="csv-opt" value="200">
+                Últimos 200 registros
+            </label>
+            <label class="modal-opt">
+                <input type="radio" name="csv-opt" value="500">
+                Últimos 500 registros
+            </label>
+            <label class="modal-opt">
+                <input type="radio" name="csv-opt" value="all">
+                Todos los disponibles (<span id="csv-total">0</span> registros)
+            </label>
+        </div>
+        <div class="modal-footer">
+            <button class="modal-cancel" onclick="closeCSVModal()">Cancelar</button>
+            <button class="modal-confirm" onclick="confirmCSV()">Descargar</button>
+        </div>
+    </div>
+</div>
+
+<script>
+// ══ ESTADO ══════════════════════════════════════════════
+const S = {
+    sensors: [],
+    history: {},
+    charts:  {},
+    alerts:  [],
+    filters:  { type: 'all', status: 'all', search: '', alert: 'all', location: 'all' },
+    readings: [],
+    alertFilter: 'all',
+    thresholds: { temperatura:80, vibracion:10, energia:100, presion:5, humedad:80 },
+    prevValues: {}
+};
+
+// ══ COLORES POR TIPO ═════════════════════════════════════
+const TYPE_COLOR  = { temperatura:'#f87171', vibracion:'#fbbf24', energia:'#34d399', presion:'#22d3ee', humedad:'#c084fc' };
+const TYPE_BADGE  = { temperatura:'tb-temp', vibracion:'tb-vib', energia:'tb-energia', presion:'tb-presion', humedad:'tb-humedad' };
+const TYPE_LABEL  = { temperatura:'Temperatura', vibracion:'Vibración', energia:'Energía', presion:'Presión', humedad:'Humedad' };
+
+function valColor(type, val) {
+    const t = S.thresholds[type] || 100;
+    const r = val / t;
+    if (r >= 1.0) return '#f87171';
+    if (r >= 0.8) return '#fbbf24';
+    return TYPE_COLOR[type] || '#22d3ee';
+}
+
+// ══ RELOJ ════════════════════════════════════════════════
+setInterval(() => {
+    document.getElementById('clock').textContent = new Date().toLocaleTimeString('es-CO');
+}, 1000);
+
+// ══ NAVEGACIÓN ══════════════════════════════════════════
+function showView(name, el) {
+    document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+    document.getElementById('view-' + name).classList.add('active');
+    el.classList.add('active');
+    const titles = { dashboard: 'Dashboard', alertas: 'Alertas', config: 'Configuración' };
+    document.getElementById('view-title').textContent = titles[name];
+}
+
+// ══ FILTROS ══════════════════════════════════════════════
+function setFilter(el) {
+    const f = el.dataset.f;
+    document.querySelectorAll(`.chip[data-f="${f}"]`).forEach(c => c.classList.remove('active'));
+    el.classList.add('active');
+    S.filters[f] = el.dataset.v;
+    renderCards();
+}
+
+function applySearch() {
+    S.filters.search = document.getElementById('searchbar').value.toLowerCase();
+    renderCards();
+}
+
+// búsqueda por id, tipo y ubicación
+function matchSearch(s, q) {
+    if (!q) return true;
+    return s.id.toLowerCase().includes(q) ||
+           s.type.toLowerCase().includes(q) ||
+           (s.location || '').toLowerCase().includes(q);
+}
+
+function filtered() {
+    return S.sensors.filter(s => {
+        const hasAlert = S.alerts.some(a => a.sensor === s.id);
+        const alertMatch = S.filters.alert === 'all' ||
+                          (S.filters.alert === 'true' && hasAlert) ||
+                          (S.filters.alert === 'false' && !hasAlert);
+        const locationMatch = S.filters.location === 'all' || s.location === S.filters.location;
+
+        return (S.filters.type   === 'all' || s.type   === S.filters.type)   &&
+               (S.filters.status === 'all' || s.status === S.filters.status) &&
+               matchSearch(s, S.filters.search) &&
+               alertMatch && locationMatch;
+    });
+}
+
+// ══ FETCH SENSORES ═══════════════════════════════════════
+async function fetchSensors() {
+    try {
+        const data = await (await fetch('/sensors')).json();
+        S.sensors = data;
+
+        const now = new Date().toISOString();
+        data.forEach(s => {
+            if (!S.history[s.id]) S.history[s.id] = [];
+            S.history[s.id].push({ time: now, value: parseFloat(s.value) });
+            if (S.history[s.id].length > 500) S.history[s.id].shift();
+
+            S.readings.push({ time: now, id: s.id, type: s.type, location: s.location || '', value: s.value, unit: s.unit, status: s.status });
+            if (S.readings.length > 50000) S.readings.shift();
+
+            const thresh = S.thresholds[s.type] || 100;
+            const prev   = S.prevValues[s.id];
+            if (prev !== undefined && prev <= thresh && s.value > thresh) {
+                addAlert(s.id, s.type, s.value, thresh);
+            }
+            S.prevValues[s.id] = s.value;
+        });
+
+        updateStats(data);
+        renderCards();
+        updateLocationChips();
+        document.getElementById('sb-info').textContent =
+            data.filter(x => x.status === 'ONLINE').length + ' sensores activos';
+    } catch(e) {
+        document.getElementById('sb-info').textContent = 'Sin conexión';
+    }
+}
+
+function updateStats(data) {
+    document.getElementById('st-total').textContent   = data.length;
+    document.getElementById('st-online').textContent  = data.filter(s => s.status === 'ONLINE').length;
+    document.getElementById('st-offline').textContent = data.filter(s => s.status !== 'ONLINE').length;
+    document.getElementById('st-alerts').textContent  = S.alerts.length;
+}
+
+// ══ CARDS ════════════════════════════════════════════════
+function renderCards() {
+    const grid = document.getElementById('cards-grid');
+    const list = filtered();
+
+    if (!list.length) {
+        grid.innerHTML = '<div class="empty-state">Sin sensores que coincidan con el filtro.</div>';
+        return;
+    }
+
+    list.forEach(s => {
+        const existing = document.getElementById('card-' + s.id);
+        if (existing) updateCard(existing, s);
+        else {
+            const c = createCard(s);
+            grid.appendChild(c);
+        }
+    });
+
+    [...grid.children].forEach(c => {
+        const id = c.id?.replace('card-', '');
+        if (id && !list.find(s => s.id === id)) c.remove();
+    });
+}
+
+function createCard(s) {
+    const div = document.createElement('div');
+    div.id        = 'card-' + s.id;
+    div.className = 'sensor-card';
+    div.dataset.type = s.type;
+
+    const thresh  = S.thresholds[s.type] || 100;
+    const pct     = Math.min((s.value / thresh) * 100, 100).toFixed(1);
+    const color   = valColor(s.type, s.value);
+    const paused  = s.status === 'PAUSED';
+
+    div.innerHTML = `
+        <div class="card-header">
+            <div>
+                <div class="card-id">${s.id}</div>
+                <div class="card-type">${TYPE_LABEL[s.type] || s.type}</div>
+            </div>
+            <span class="type-badge ${TYPE_BADGE[s.type] || ''}">${s.type.slice(0,4).toUpperCase()}</span>
+        </div>
+        <div class="card-value" style="color:${color}">${parseFloat(s.value).toFixed(2)}<span class="card-unit">${s.unit}</span></div>
+        <div class="progress-track">
+            <div class="progress-fill" style="width:${pct}%;background:${color}"></div>
+        </div>
+        <div class="card-chart"><canvas id="ch-${s.id}"></canvas></div>
+        <div class="card-footer">
+            <div class="status-pill sp-${s.status.toLowerCase()}">
+                <div class="sp-dot"></div>
+                ${{ONLINE:'Activo',OFFLINE:'Desconectado',PAUSED:'Pausado'}[s.status] || s.status}
+            </div>
+            <div class="toggle-wrap">
+                <span class="toggle-label">${paused ? 'Reanudar' : 'Activo'}</span>
+                <label class="toggle">
+                    <input type="checkbox" ${paused ? '' : 'checked'} onchange="toggleSensor('${s.id}', this.checked)">
+                    <span class="toggle-slider"></span>
+                </label>
+            </div>
+        </div>
+    `;
+
+    if (paused) div.classList.add('is-paused');
+    if (s.value > thresh) div.classList.add('is-alert');
+
+    setTimeout(() => buildChart(s.id, s.type), 30);
+    return div;
+}
+
+function updateCard(card, s) {
+    const thresh = S.thresholds[s.type] || 100;
+    const pct    = Math.min((s.value / thresh) * 100, 100).toFixed(1);
+    const color  = valColor(s.type, s.value);
+    const paused = s.status === 'PAUSED';
+
+    const vEl = card.querySelector('.card-value');
+    if (vEl) {
+        vEl.style.color = color;
+        vEl.innerHTML = `${parseFloat(s.value).toFixed(2)}<span class="card-unit">${s.unit}</span>`;
+    }
+
+    const pEl = card.querySelector('.progress-fill');
+    if (pEl) { pEl.style.width = pct + '%'; pEl.style.background = color; }
+
+    const stEl = card.querySelector('.status-pill');
+    if (stEl) {
+        stEl.className = `status-pill sp-${s.status.toLowerCase()}`;
+        stEl.innerHTML = `<div class="sp-dot"></div>${{ONLINE:'Activo',OFFLINE:'Desconectado',PAUSED:'Pausado'}[s.status] || s.status}`;
+    }
+
+    card.classList.toggle('is-paused', paused);
+    card.classList.toggle('is-alert', s.value > thresh);
+
+    updateChart(s.id);
+}
+
+// ══ CHARTS ══════════════════════════════════════════════
+function buildChart(id, type) {
+    const canvas = document.getElementById('ch-' + id);
+    if (!canvas || S.charts[id]) return;
+
+    const c = TYPE_COLOR[type] || '#7c6de8';
+    const vals = (S.history[id] || []).map(r => r.value || r);
+    S.charts[id] = new Chart(canvas.getContext('2d'), {
+        type: 'line',
+        data: {
+            labels: Array(vals.length).fill(''),
+            datasets: [{
+                data: vals,
+                borderColor: c,
+                borderWidth: 1.5,
+                pointRadius: 0,
+                fill: true,
+                backgroundColor: c + '15',
+                tension: 0.4
+            }]
+        },
+        options: {
+            animation: { duration: 400 },
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false }, tooltip: { enabled: false } },
+            scales: { x: { display: false }, y: { display: false, grace: '20%' } }
+        }
+    });
+}
+
+function updateChart(id) {
+    const ch = S.charts[id];
+    if (!ch) return;
+    const vals = (S.history[id] || []).map(r => r.value || r);
+    ch.data.datasets[0].data = vals;
+    ch.data.labels = Array(vals.length).fill('');
+    ch.update();
+}
+
+// ══ PAUSE / RESUME ═══════════════════════════════════════
+async function toggleSensor(id, active) {
+    try {
+        await fetch(`/${active ? 'resume' : 'pause'}?sensor=${id}`);
+        toast(active ? '▶ Reanudado' : '⏸ Pausado', `Sensor ${id}`, active ? '#34d399' : '#fbbf24');
+        fetchSensors();
+    } catch(e) {
+        toast('Error', 'No se pudo cambiar el estado', '#f87171');
+    }
+}
+
+// ══ UMBRALES ═════════════════════════════════════════════
+function updateLbl(k, u) {
+    const v = document.getElementById('sl-' + k).value;
+    document.getElementById('lbl-' + k).textContent = v + ' ' + u;
+}
+
+async function applyThresholds() {
+    const map = [
+        ['temp','temperatura'],
+        ['temp2','temperatura'],
+        ['vib','vibracion'],
+        ['energia','energia'],
+        ['presion','presion'],
+        ['presion2','presion'],
+        ['humedad','humedad']
+    ];
+    let ok = true;
+    for (const [k, t] of map) {
+        const v = document.getElementById('sl-' + k).value;
+        try {
+            await fetch(`/threshold?type=${t}&value=${v}`);
+            S.thresholds[t] = parseFloat(v);
+        } catch(e) { ok = false; }
+    }
+    const m = document.getElementById('thresh-msg');
+    m.textContent = ok ? 'Configuración aplicada' : 'Error al aplicar';
+    m.style.color = ok ? '#34d399' : '#f87171';
+    setTimeout(() => m.textContent = '', 2000);
+}
+
+// ══ ALERTAS ══════════════════════════════════════════════
+function addAlert(sensorId, type, val, thresh) {
+    S.alerts.unshift({
+        id: Date.now(), sensor: sensorId, type, val, thresh,
+        time: new Date().toLocaleTimeString('es-CO')
+    });
+
+    const b = document.getElementById('nav-badge');
+    b.style.display = 'inline';
+    b.textContent = S.alerts.length;
+    document.getElementById('st-alerts').textContent = S.alerts.length;
+    document.getElementById('al-count').textContent  = S.alerts.length;
+
+    renderAlerts();
+    toast('🚨 ' + sensorId,
+        `${TYPE_LABEL[type] || type} → ${parseFloat(val).toFixed(2)} (límite: ${thresh})`,
+        '#f87171');
+}
+
+function renderAlerts() {
+    const list = document.getElementById('alerts-list');
+    const data = S.alerts.filter(a =>
+        S.alertFilter === 'all' || a.sensor === S.alertFilter
+    );
+    if (!data.length) {
+        list.innerHTML = '<div class="empty-state">Sin alertas registradas.</div>';
+        return;
+    }
+    list.innerHTML = data.map(a => `
+        <div class="alert-item">
+            <div class="alert-icon">🚨</div>
+            <div class="alert-content">
+                <div class="alert-sensor">${a.sensor}</div>
+                <div class="alert-desc">${TYPE_LABEL[a.type] || a.type} superó el umbral de ${a.thresh}</div>
+                <div class="alert-time">${a.time}</div>
+            </div>
+            <div class="alert-val">${parseFloat(a.val).toFixed(2)}</div>
+        </div>
+    `).join('');
+}
+
+function setAlertFilter(el) {
+    document.querySelectorAll('.filter-bar .chip[data-af]').forEach(c => c.classList.remove('active'));
+    el.classList.add('active');
+    S.alertFilter = el.dataset.af;
+    renderAlerts();
+}
+
+function clearAlerts() {
+    S.alerts = [];
+    document.getElementById('nav-badge').style.display = 'none';
+    document.getElementById('st-alerts').textContent = '0';
+    document.getElementById('al-count').textContent  = '0';
+    renderAlerts();
+    document.querySelectorAll('.sensor-card').forEach(c => c.classList.remove('is-alert'));
+}
+
+// ══ TOASTS ═══════════════════════════════════════════════
+function toast(title, body, color = '#f87171') {
+    const c = document.getElementById('toasts');
+    const t = document.createElement('div');
+    t.className = 'toast';
+    t.style.borderLeftColor = color;
+    t.innerHTML = `
+        <div class="toast-head">
+            <span class="toast-title" style="color:${color}">${title}</span>
+        </div>
+        <div class="toast-body">${body}</div>
+    `;
+    c.appendChild(t);
+    setTimeout(() => {
+        t.style.opacity = '0';
+        setTimeout(() => t.remove(), 400);
+    }, 3500);
+}
+
+// ══ CARGAR UMBRALES DEL SERVIDOR ════════════════════════
+async function loadThresholds() {
+    try {
+        const t = await (await fetch('/thresholds')).json();
+        const map   = { temperatura:'temp', vibracion:'vib', energia:'energia', presion:'presion', humedad:'humedad' };
+        const units = { temp:'°C', vib:'mm/s', energia:'kWh', presion:'bar', humedad:'%' };
+        for (const [k, sk] of Object.entries(map)) {
+            if (t[k] !== undefined) {
+                S.thresholds[k] = t[k];
+                const sl = document.getElementById('sl-' + sk);
+                if (sl) { sl.value = t[k]; updateLbl(sk, units[sk]); }
+            }
+        }
+    } catch(e) {}
+}
+
+// ══ UBICACIONES DINÁMICAS ═══════════════════════════════
+function updateLocationChips() {
+    const locs = [...new Set(S.sensors.map(s => s.location))];
+    const container = document.getElementById('location-chips');
+    container.innerHTML = '';
+    locs.forEach(loc => {
+        const chip = document.createElement('span');
+        chip.className = 'chip';
+        chip.dataset.f = 'location';
+        chip.dataset.v = loc;
+        chip.textContent = loc.substring(0, 20);
+        chip.onclick = function() { setFilter(this); };
+        container.appendChild(chip);
+    });
+}
+
+// ══ MODAL CSV ═══════════════════════════════════════════
+function downloadCSV() {
+    document.getElementById('csv-total').textContent = S.readings.length;
+    document.getElementById('csv-modal').classList.add('open');
+}
+
+function closeCSVModal() {
+    document.getElementById('csv-modal').classList.remove('open');
+}
+
+function confirmCSV() {
+    const opt = document.querySelector('input[name="csv-opt"]:checked').value;
+    let csv = 'Timestamp,Sensor,Tipo,Ubicacion,Valor,Unidad\n';
+
+    if (opt === 'all') {
+        S.readings.forEach(r => {
+            csv += `"${r.time}","${r.id}","${r.type}","${r.location}","${parseFloat(r.value).toFixed(2)}","${r.unit}"\n`;
+        });
+    } else {
+        const n = parseInt(opt);
+        S.sensors.forEach(s => {
+            const hist = (S.history[s.id] || []).slice(-n);
+            hist.forEach(r => {
+                const ts = r.time || new Date().toISOString();
+                csv += `"${ts}","${s.id}","${s.type}","${s.location || ''}","${parseFloat(r.value || r).toFixed(2)}","${s.unit}"\n`;
+            });
+        });
+    }
+
+    const blob = new Blob([csv], { type: 'text/csv; charset=utf-8;' });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href     = url;
+    a.download = `historial_sensores_${new Date().toISOString().split('T')[0]}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+    closeCSVModal();
+}
+
+// ══ INIT ═════════════════════════════════════════════════
+async function init() {
+    await loadThresholds();
+    await fetchSensors();
+    updateLocationChips();
+    setInterval(fetchSensors, 500);
+    setInterval(updateLocationChips, 10000);
+}
+
+init();
+</script>
+</body>
+</html>
